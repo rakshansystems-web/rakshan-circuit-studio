@@ -1,1 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Tinkercad-Style Circuit & Code Designer</title>
+    <!-- Google Blockly & Syntax Highlighting CDNs -->
+    <script src="https://unpkg.com/blockly/blockly.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+    
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; display: flex; height: 100vh; background: #1e1e1e; color: white; overflow: hidden; }
+        
+        /* Left Sidebar Menu */
+        #sidebar { width: 220px; background: #252526; padding: 15px; display: flex; flex-direction: column; gap: 10px; border-right: 1px solid #333; z-index: 10; }
+        .menu-btn { padding: 10px; background: #3c3c3c; border: none; color: white; cursor: pointer; border-radius: 4px; text-align: left; font-weight: bold; }
+        .menu-btn:hover { background: #007acc; }
+        
+        /* Main Workspace Views */
+        .workspace-panel { flex-grow: 1; position: relative; display: none; height: 100%; }
+        .active-panel { display: flex; flex-direction: row; }
+        
+        /* Circuit Canvas Container */
+        #canvas-container { flex-grow: 1; position: relative; height: 100%; overflow: hidden; }
+        #circuitCanvas { background-color: #121824; background-image: radial-gradient(rgba(255, 255, 255, 0.15) 1px, transparent 1px); background-size: 25px 25px; width: 100%; height: 100%; display: block; }
 
+        /* Tinkercad-Style Right Component Menu Panel */
+        #component-menu { width: 280px; background: #2d2d30; border-left: 1px solid #3f3f46; display: flex; flex-direction: column; height: 100%; overflow-y: auto; z-index: 5; }
+        .menu-header { padding: 12px 15px; background: #1f1f22; font-weight: bold; font-size: 14px; border-bottom: 1px solid #3f3f46; color: #4ec9b0; }
+        
+        .section-title { padding: 10px 15px; background: #333337; font-size: 12px; font-weight: bold; text-transform: uppercase; color: #9cdcfe; cursor: pointer; border-top: 1px solid #3f3f46; display: flex; justify-content: space-between; align-items: center; }
+        .section-title:hover { background: #3e3e42; }
+        
+        .section-content { display: flex; flex-direction: column; padding: 8px 12px; gap: 6px; background: #252526; }
+        .component-item { padding: 8px 12px; background: #333337; border: 1px solid #3f3f46; border-radius: 4px; color: #d4d4d4; cursor: pointer; font-size: 13px; text-align: left; transition: 0.2s; }
+        .component-item:hover { background: #007acc; color: white; border-color: #007acc; }
+
+        /* Split view for Code Generator Panel */
+        #code-split-view { display: flex; height: 100%; width: 100%; }
+        #blocklyDiv { flex: 2; height: 100%; }
+        #codeViewerPanel { flex: 1; background: #1e1e1e; border-left: 1px solid #333; display: flex; flex-direction: column; padding: 15px; }
+        #codeViewerPanel h3 { margin-top: 0; color: #4ec9b0; }
+        pre { flex-grow: 1; background: #111; padding: 15px; border-radius: 5px; overflow-y: auto; margin: 0; font-family: 'Courier New', Courier, monospace; font-size: 13px; }
+        
+        .toolbar { padding: 8px 15px; background: #2d2d2d; display: flex; gap: 10px; border-bottom: 1px solid #333; align-items: center; }
+        .sub-btn { padding: 6px 12px; background: #007acc; border: none; color: white; border-radius: 3px; cursor: pointer; font-size: 12px; }
+        .sub-btn:hover { background: #005999; }
+    </style>
+</head>
+<body>
+
+    <!-- Left Sidebar Navigation -->
+    <div id="sidebar">
+        <h2>⚡ Circuit Studio</h2>
+        <hr style="border-color: #444;">
+        <button class="menu-btn" onclick="switchView('circuit')">🔌 Circuit Canvas</button>
+        <button class="menu-btn" onclick="switchView('blocks')">🧩 Code Blocks</button>
+        <hr style="border-color: #444;">
+        <button class="menu-btn" onclick="saveFullProject()" style="background: #28a745;">💾 Save Project</button>
+    </div>
+
+    <!-- Panel 1: Circuit Designer Canvas with Tinkercad Sidebar -->
+    <div id="circuit-panel" class="workspace-panel active-panel">
+        <div id="canvas-container">
+            <canvas id="circuitCanvas"></canvas>
+        </div>
+
+        <!-- Tinkercad-Style 5-Section Component Item Menu -->
+        <div id="component-menu">
+            <div class="menu-header">Components Library</div>
+
+            <!-- Section 1: Passive Components -->
+            <div class="section-title" onclick="toggleSection('sec1')">📁 1. Passive Components <span>▼</span></div>
+            <div id="sec1" class="section-content">
+                <button class="component-item" onclick="addPart('Resistor')">⚡ Resistor</button>
+                <button class="component-item" onclick="addPart('Capacitor')">⚡ Capacitor</button>
+                <button class="component-item" onclick="addPart('Inductor')">⚡ Inductor</button>
+                <button class="component-item" onclick="addPart('Potentiometer')">⚡ Potentiometer</button>
+            </div>
+
+            <!-- Section 2: Active / Semiconductors -->
+            <div class="section-title" onclick="toggleSection('sec2')">📁 2. Active & Semiconductors <span>▼</span></div>
+            <div id="sec2" class="section-content">
+                <button class="component-item" onclick="addPart('Diode (LED)')">💡 Diode / LED</button>
+                <button class="component-item" onclick="addPart('Transistor (BJT/MOSFET)')">🔌 Transistor</button>
+                <button class="component-item" onclick="addPart('Operational Amplifier')">📐 Op-Amp IC</button>
+                <button class="component-item" onclick="addPart('Voltage Regulator')">🔋 Voltage Regulator (7805)</button>
+            </div>
+
+            <!-- Section 3: Microcontrollers & Boards -->
+            <div class="section-title" onclick="toggleSection('sec3')">📁 3. Microcontrollers <span>▼</span></div>
+            <div id="sec3" class="section-content">
+                <button class="component-item" onclick="addPart('Arduino Uno')">🤖 Arduino Uno</button>
+                <button class="component-item" onclick="addPart('ESP32 WiFi Board')">📡 ESP32 IoT Board</button>
+                <button class="component-item" onclick="addPart('Raspberry Pi Pico')">🍓 Pi Pico</button>
+                <button class="component-item" onclick="addPart('ATmega328P Chip')">💻 Bare MCU Chip</button>
+            </div>
+
+            <!-- Section 4: Sensors & Outputs -->
+            <div class="section-title" onclick="toggleSection('sec4')">📁 4. Sensors & Outputs <span>▼</span></div>
+            <div id="sec4" class="section-content">
+                <button class="component-item" onclick="addPart('Temperature Sensor (TMP36)')">🌡️ Temp Sensor</button>
+                <button class="component-item" onclick="addPart('PIR Motion Sensor')">👁️ Motion Sensor</button>
+                <button class="component-item" onclick="addPart('LCD 16x2 Display')">📟 LCD Screen</button>
+                <button class="component-item" onclick="addPart('DC Motor / Servo')">⚙️ DC Motor</button>
+            </div>
+
+            <!-- Section 5: Old & Classic Components -->
+            <div class="section-title" onclick="toggleSection('sec5')">📁 5. Old & Classic Parts <span>▼</span></div>
+            <div id="sec5" class="section-content">
+                <button class="component-item" onclick="addPart('Vacuum Tube (Triode)')">📻 Vacuum Tube (Valve)</button>
+                <button class="component-item" onclick="addPart('Carbon Microphone')">🎙️ Carbon Mic</button>
+                <button class="component-item" onclick="addPart('Relay Switch (Electromechanical)')">🎚️ Vintage Relay</button>
+                <button class="component-item" onclick="addPart('Neon Indicator Bulb')">💡 Neon Bulb</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel 2: Blockly + Live Code Split View -->
+    <div id="blocks-panel" class="workspace-panel">
+        <div id="code-split-view">
+            <div style="display:flex; flex-direction:column; flex:2; height:100%;">
+                <div class="toolbar">
+                    <span style="font-weight: bold; font-size: 13px; color: #9cdcfe;">Target Language:</span>
+                    <button class="sub-btn" onclick="changeLanguage('arduino')">Arduino C++</button>
+                    <button class="sub-btn" onclick="changeLanguage('python')">MicroPython</button>
+                    <button class="sub-btn" onclick="changeLanguage('json')">Circuit JSON Netlist</button>
+                </div>
+                <div id="blocklyDiv" style="flex-grow:1;"></div>
+            </div>
+            <div id="codeViewerPanel">
+                <h3>Live Generated Code</h3>
+                <pre><code id="codeOutput" class="language-cpp">// Snap blocks together to generate code...</code></pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- Blockly Toolbox Definition -->
+    <xml id="toolbox" style="display: none">
+        <category name="Microcontroller IO" colour="#5b80a5">
+            <block type="arduino_pin_mode"></block>
+            <block type="digital_write"></block>
+            <block type="delay_ms"></block>
+        </category>
+        <category name="Logic & Math" colour="#a55b5b">
+            <block type="controls_if"></block>
+            <block type="logic_compare"></block>
+            <block type="math_number"></block>
+        </category>
+    </xml>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
